@@ -33,6 +33,7 @@ error_log("Datos decodificados: " . print_r($datos, true));
 
 // Extraer datos del cliente desde la clave 'customer'
 $customer = $datos['customer'] ?? null;
+$platformData = $datos['platform'] ?? null;
 
 if (
     !$customer ||
@@ -40,7 +41,8 @@ if (
     empty($customer['lastName']) ||
     empty($customer['email']) ||
     empty($customer['whatsapp']) ||
-    empty($datos['numbers'])
+    empty($datos['numbers']) ||
+    !$platformData
 ) {
     error_log("Faltan campos obligatorios.");
     http_response_code(400);
@@ -55,15 +57,15 @@ $whatsapp = $customer['whatsapp'];
 $numbers = $datos['numbers'];
 $numbersStr = implode(',', $numbers);
 
-// Configuración de integración de Bold
+// Configuración de integración de Bold usando datos de la plataforma
 $apiKey         = '1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA';
 $integrityKey   = 'fn6G5OztUmMcvQX6YXU2Tg';
 $orderId        = 'ORDEN-' . time();
-$amount         = '20000';  // Por ejemplo, 20000 COP
+$amount         = strval($platformData['price']);  // Convertir el precio a string
 $currency       = 'COP';
-$description    = 'Rifa de Iphone 13 pro max';
+$description    = 'Suscripción a ' . $platformData['name'];
 $tax            = 'vat-19';
-$redirectionUrl = 'https://rifa.sheerit.com.co/';
+$redirectionUrl = 'https://sheerit.com.co/';
 
 // Generar la firma de integridad
 $cadena_concatenada = $orderId . $amount . $currency . $integrityKey;
