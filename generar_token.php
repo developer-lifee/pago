@@ -4,9 +4,12 @@
 require_once 'conexion.php'; // Incluye la conexión a la base de datos
 
 header("Content-Type: application/json");
-header("Access-Control-Allow-Origin: https://rifa.sheerit.com.co");
+// Update CORS headers to handle both domains
+header("Access-Control-Allow-Origin: https://sheerit.com.co");
+// Add additional headers needed for CORS
 header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Credentials: true");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
