@@ -7,9 +7,9 @@ $integrityKey   = 'VIJ4-2mCZXIPOvT3NJEAsg';                      // Llave secret
 $orderId        = 'ORDEN-' . time();                            // Identificador único de la venta
 $amount         = '20000';                                     // Monto en COP sin decimales (por ejemplo, 300000 equivale a $300.000 COP)
 $currency       = 'COP';                                        // Divisa (COP o USD)
-$description    = 'Compra de rifa';                             // Descripción de la venta (mínimo 2 caracteres y máximo 100)
+$description    = 'Compra de plataforma';                             // Descripción de la venta (mínimo 2 caracteres y máximo 100)
 $tax            = 'vat-19';                                     // Impuesto a aplicar (en este ejemplo IVA del 19%)
-$redirectionUrl = 'https://rifa.sheerit.com.co/procesar-pago.php'; // URL a la que se redirige tras finalizar el pago
+$redirectionUrl = 'https://sheerit.com.co/procesar-pago.php'; // URL a la que se redirige tras finalizar el pago
 
 // Genera la firma de integridad (concatenación en el orden: orderId, amount, currency, integrityKey)
 $cadenaConcatenada   = $orderId . $amount . $currency . $integrityKey;
