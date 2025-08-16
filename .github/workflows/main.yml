@@ -1,0 +1,32 @@
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  web-deploy:
+    name: 🚀 Deploy website
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # Specifically, packages like ESLint, TypeScript ESLint, Vite, React Hook Form, and others need Node.js ≥ 18.0.0
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🏗️ Build project
+        run: npm run build
+
+      - name: 📂 Sync build folder via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          local-dir: dist/
+          server: ftps4.us.freehostia.com
+          username: estavi0
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: sheerit.com.co/pago
