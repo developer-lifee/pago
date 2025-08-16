@@ -18,4 +18,4 @@ jobs:
           server: ftps4.us.freehostia.com
           username: estavi0
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: sheerit.com.co/pago
+          server-dir: sheerit.com.co/pago/
