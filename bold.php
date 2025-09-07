@@ -5,7 +5,7 @@
 $apiKey         = 'YCJ9yFnOlrWiS9Mq4KZLfize2ApawYb8rqrj0pge6pM';  // Llave de identidad (publica)
 $integrityKey   = 'VIJ4-2mCZXIPOvT3NJEAsg';                      // Llave secreta para generar la firma
 $orderId        = 'ORDEN-' . time();                            // Identificador único de la venta
-$amount         = '20000';                                     // Monto en COP sin decimales (por ejemplo, 300000 equivale a $300.000 COP)
+$amount         = '69000';                                     // Monto en COP sin decimales (por ejemplo, 300000 equivale a $300.000 COP)
 $currency       = 'COP';                                        // Divisa (COP o USD)
 $description    = 'Compra de plataforma';                             // Descripción de la venta (mínimo 2 caracteres y máximo 100)
 $tax            = 'vat-19';                                     // Impuesto a aplicar (en este ejemplo IVA del 19%)
