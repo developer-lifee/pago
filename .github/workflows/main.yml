@@ -1,21 +1,30 @@
+# In your .github/workflows/deploy.yml file
+
+name: Deploy PHP Files via FTP
+
 on:
   push:
     branches:
-      - main
+      - main # Or your deployment branch
 
 jobs:
-  web-deploy:
-    name: 🚀 Deploy website
+  ftp-deploy:
+    name: 🎉 Deploy
     runs-on: ubuntu-latest
     steps:
-      - name: 🚚 Get latest code
-        uses: actions/checkout@v4
 
-      - name: 📂 Sync files via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          local-dir: dist/
-          server: ftps4.us.freehostia.com
-          username: estavi0
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: sheerit.com.co/pago/
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v4
+
+    # NO BUILD STEP IS NEEDED FOR A SIMPLE PHP SYNC
+
+    - name: 🚀 FTP Deploy
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        # Correctly point to the root directory to upload all files
+        local-dir: ./
+        server: ftps4.us.freehostia.com
+        username: estavi0
+        # Make sure to use a secret for your password!
+        password: ${{ secrets.FTP_PASSWORD }}
+        server-dir: sheerit.com.co/pago/
