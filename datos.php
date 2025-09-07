@@ -1,7 +1,7 @@
 <?php
 require_once 'conexion.php'; // Incluye el archivo de conexión
 
-header("Access-Control-Allow-Origin: https://rifa.sheerit.com.co"); // URL de tu frontend en producción
+header("Access-Control-Allow-Origin: https://sheerit.com.co"); // URL de tu frontend en producción
 header("Access-Control-Allow-Methods: POST, OPTIONS"); // Permite POST y OPTIONS
 header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
