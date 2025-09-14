@@ -1,0 +1,70 @@
+# Prevenir listado de directorios
+Options -Indexes
+
+# Proteger archivos sensibles
+<FilesMatch "^(config\.php|conexion\.php|\.env|\.git)">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Proteger el archivo .htaccess
+<Files .htaccess>
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Permitir solo peticiones POST en archivos específicos
+<FilesMatch "^(generar_token\.php|procesar-pago\.php|procesar-webhook\.php)$">
+    <LimitExcept POST>
+        Deny from all
+    </LimitExcept>
+</FilesMatch>
+
+# Forzar HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Prevenir acceso a archivos y directorios ocultos
+<FilesMatch "^\.">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Headers de seguridad
+Header always set X-XSS-Protection "1; mode=block"
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set X-Content-Type-Options "nosniff"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set Content-Security-Policy "default-src 'self' https://*.bold.co; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.bold.co; style-src 'self' 'unsafe-inline' https://*.bold.co; img-src 'self' data: https://*.bold.co;"
+
+# Prevenir acceso al archivo de configuración de ejemplo
+<Files config.example.php>
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Desactivar la firma del servidor
+ServerSignature Off
+
+# Proteger contra ataques comunes
+RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK|OPTIONS)
+RewriteRule .* - [F]
+
+# Prevenir hotlinking de imágenes (ajusta el dominio)
+RewriteCond %{HTTP_REFERER} !^$
+RewriteCond %{HTTP_REFERER} !^https?://(www\.)?sheerit\.com\.co [NC]
+RewriteRule \.(jpg|jpeg|png|gif)$ - [NC,F,L]
+
+# Bloquear acceso a archivos de respaldo y logs
+<FilesMatch "\.(bak|config|sql|fla|psd|ini|log|sh|inc|swp|dist|old|mdb|json|config.example.php)$">
+    Order Allow,Deny
+    Deny from all
+    Satisfy All
+</FilesMatch>
+
+# Limitar el tamaño máximo de petición para prevenir ataques DDoS
+LimitRequestBody 10485760
+
+# Configurar zona horaria PHP por defecto
+php_value date.timezone "America/Bogota"

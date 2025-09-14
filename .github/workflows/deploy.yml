@@ -1,0 +1,53 @@
+# In your .github/workflows/deploy.yml file
+
+name: Deploy PHP Files via FTP
+
+on:
+  push:
+    branches:
+      - main # Or your deployment branch
+
+jobs:
+  ftp-deploy:
+    name: 🎉 Deploy
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: 🚚 Get latest code
+      uses: actions/checkout@v4
+
+    - name: 📝 Create config file from secrets
+      run: |
+        echo "<?php" > config.php
+        echo "define('ENVIRONMENT', 'produccion');" >> config.php
+        echo "\$config = [];" >> config.php
+        echo "\$config['db_host'] = '${{ secrets.DB_HOST }}';" >> config.php
+        echo "\$config['db_name'] = '${{ secrets.DB_NAME }}';" >> config.php
+        echo "\$config['db_user'] = '${{ secrets.DB_USER }}';" >> config.php
+        echo "\$config['db_pass'] = '${{ secrets.DB_PASS }}';" >> config.php
+        echo "\$config['bold_identity_key'] = '${{ secrets.BOLD_IDENTITY_KEY }}';" >> config.php
+        echo "\$config['bold_secret_key'] = '${{ secrets.BOLD_SECRET_KEY }}';" >> config.php
+
+    - name: 🚀 FTP Deploy
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        # Correctly point to the root directory to upload all files
+        local-dir: ./
+        server: ftps4.us.freehostia.com
+        username: estavi0
+        password: ${{ secrets.FTP_PASSWORD }}
+        server-dir: sheerit.com.co/pago/
+        # Exclude sensitive files and development configurations
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          config.example.php
+          README.md
+          .env
+          .env.*
+          
+        # Asegurarse de que el .htaccess tenga los permisos correctos después del deploy
+    - name: 🔒 Set .htaccess permissions
+      run: |
+        chmod 644 .htaccess
