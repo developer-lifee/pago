@@ -32,7 +32,7 @@ try {
     }
 
     // 2. Verificar el estado real de la transacción con la API de Bold
-    $apiKey = '1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA'; // Tu API Key de PRODUCCIÓN
+    $apiKey = $config['bold_identity_key']; // Usar llave de config
     $url = 'https://api.bold.co/v1/transactions?order_id=' . $orderId;
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

@@ -44,7 +44,7 @@ if (json_last_error() !== JSON_ERROR_NONE) {
 
 // Validar la firma recibida (usando la llave secreta)
 $signatureHeader = $_SERVER['HTTP_X_BOLD_SIGNATURE'] ?? '';
-$secretKey = 'fn6G5OztUmMcvQX6YXU2Tg'; // Tu llave secreta de integración
+$secretKey = $config['bold_secret_key']; // Usar llave de config
 $encodedBody = base64_encode($body);
 $computedSignature = hash_hmac('sha256', $encodedBody, $secretKey);
 if (!hash_equals($computedSignature, $signatureHeader)) {
@@ -71,7 +71,7 @@ if (!$orderId || $eventType !== 'SALE_APPROVED') {
     }
     if ($orderId) {
         // Tu llave de identidad (para autorización en la consulta fallback)
-        $identityKey = '1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA';
+        $identityKey = $config['bold_identity_key']; // Usar llave de config
         $fallbackResponse = getFallbackNotification($orderId, $identityKey);
         if ($fallbackResponse && isset($fallbackResponse['notifications'])) {
             // Tomamos la primera notificación

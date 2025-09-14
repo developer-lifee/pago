@@ -60,9 +60,9 @@ $whatsapp = $customer['whatsapp'];
 $numbers = $datos['numbers'];
 $numbersStr = implode(',', $numbers);
 
-// Configuración de integración de Bold usando datos de la plataforma
-$apiKey         = '1y0D48xaDriWO_CNz7oXUopfkKx5VjiExsdDW0gj2eA';
-$integrityKey   = 'fn6G5OztUmMcvQX6YXU2Tg';
+// Configuración de integración de Bold usando datos del array de config
+$apiKey         = $config['bold_identity_key']; // Llave de identidad
+$integrityKey   = $config['bold_secret_key'];   // Llave secreta
 $orderId        = 'ORDEN-' . time();
 $amount         = strval($platformData['price']);  // Convertir el precio a string
 $currency       = 'COP';
