@@ -1,0 +1,17 @@
+# Ignorar archivo de configuración con credenciales
+config.php
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Dependencias y directorios de ambiente
+/vendor/
+/node_modules/
+*.log
+
+# IDE y editores
+.idea/
+.vscode/
+*.swp
+*.swo
