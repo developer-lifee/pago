@@ -87,20 +87,32 @@ write_log("Datos decodificados correctamente: " . print_r($datos, true));
 $customer = $datos['customer'] ?? null;
 $platformData = $datos['platform'] ?? null;
 
-if (
-    !$customer ||
-    empty($customer['firstName']) ||
-    empty($customer['lastName']) ||
-    empty($customer['email']) ||
-    empty($customer['whatsapp']) ||
-    empty($datos['numbers']) ||
-    !$platformData
-) {
-    error_log("Faltan campos obligatorios.");
+write_log("Validando campos obligatorios...");
+$camposFaltantes = [];
+
+if (!$customer) {
+    $camposFaltantes[] = 'customer';
+} else {
+    if (empty($customer['firstName'])) $camposFaltantes[] = 'firstName';
+    if (empty($customer['lastName'])) $camposFaltantes[] = 'lastName';
+    if (empty($customer['email'])) $camposFaltantes[] = 'email';
+    if (empty($customer['whatsapp'])) $camposFaltantes[] = 'whatsapp';
+}
+
+if (empty($datos['numbers'])) $camposFaltantes[] = 'numbers';
+if (!$platformData) $camposFaltantes[] = 'platform';
+
+if (!empty($camposFaltantes)) {
+    write_log("ERROR: Faltan los siguientes campos obligatorios: " . implode(', ', $camposFaltantes));
     http_response_code(400);
-    echo json_encode(['error' => 'Faltan campos obligatorios']);
+    echo json_encode([
+        'error' => 'Faltan campos obligatorios',
+        'campos_faltantes' => $camposFaltantes
+    ]);
     exit;
 }
+
+write_log("Todos los campos obligatorios están presentes");
 
 $firstName = $customer['firstName'];
 $lastName = $customer['lastName'];
@@ -110,14 +122,37 @@ $numbers = $datos['numbers'];
 $numbersStr = implode(',', $numbers);
 
 // Configuración de integración de Bold usando datos del array de config
-$apiKey         = $config['bold_identity_key']; // Llave de identidad
-$integrityKey   = $config['bold_secret_key'];   // Llave secreta
-$orderId        = 'ORDEN-' . time();
-$amount         = strval($platformData['price']);  // Convertir el precio a string
-$currency       = 'COP';
-$description    = 'Suscripción a ' . $platformData['name'];
-$tax            = 'vat-19';
-$redirectionUrl = 'https://sheerit.com.co/';
+write_log("Configurando datos de integración con Bold...");
+
+try {
+    if (!isset($config['bold_identity_key']) || !isset($config['bold_secret_key'])) {
+        write_log("ERROR: Falta configuración de Bold en el archivo de configuración");
+        throw new Exception("Configuración de Bold incompleta");
+    }
+
+    $apiKey         = $config['bold_identity_key']; // Llave de identidad
+    $integrityKey   = $config['bold_secret_key'];   // Llave secreta
+    $orderId        = 'ORDEN-' . time();
+    
+    if (!isset($platformData['price'])) {
+        write_log("ERROR: Falta el precio en los datos de la plataforma");
+        throw new Exception("Precio no especificado");
+    }
+    
+    $amount         = strval($platformData['price']);  // Convertir el precio a string
+    $currency       = 'COP';
+    $description    = 'Suscripción a ' . ($platformData['name'] ?? 'servicio');
+    $tax            = 'vat-19';
+    $redirectionUrl = 'https://sheerit.com.co/';
+    
+    write_log("Datos de configuración de Bold procesados correctamente");
+    write_log("OrderID generado: " . $orderId);
+} catch (Exception $e) {
+    write_log("ERROR en la configuración de Bold: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Error en la configuración del pago']);
+    exit;
+}
 
 // Generar la firma de integridad
 $cadena_concatenada = $orderId . $amount . $currency . $integrityKey;
