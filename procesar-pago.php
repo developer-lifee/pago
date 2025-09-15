@@ -3,6 +3,25 @@
 
 require_once 'conexion.php';
 
+// Configuración de logging
+$log_dir = __DIR__ . '/logs';
+if (!is_dir($log_dir)) {
+    mkdir($log_dir, 0755, true);
+}
+
+$log_file = $log_dir . '/payment.log';
+
+function write_log($message) {
+    global $log_file;
+    $log_entry = sprintf(
+        "[%s] [PAYMENT] [%s] %s\n",
+        date('Y-m-d H:i:s'),
+        $_SERVER['REMOTE_ADDR'] ?? 'Unknown IP',
+        $message
+    );
+    error_log($log_entry, 3, $log_file);
+}
+
 // Obtener el ID de la orden, ya sea por redirección del usuario o por webhook de Bold
 $orderId = $_GET['bold-order-id'] ?? null;
 if (!$orderId) {
@@ -11,6 +30,7 @@ if (!$orderId) {
 }
 
 if (empty($orderId)) {
+    write_log("Error: No se recibió un ID de orden");
     http_response_code(400);
     echo "Error: No se recibió un ID de orden.";
     exit;
@@ -25,11 +45,14 @@ try {
     $tempCustomer = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$tempCustomer) {
+        write_log("Transacción no encontrada en la tabla temporal para el order_id: " . $orderId);
         http_response_code(404);
         echo "Transacción no encontrada en la tabla temporal.";
         $conn->rollBack();
         exit;
     }
+    
+    write_log("Datos temporales encontrados para order_id: " . $orderId);
 
     // 2. Verificar el estado real de la transacción con la API de Bold
     $apiKey = $config['bold_identity_key']; // Usar llave de config

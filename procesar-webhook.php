@@ -1,14 +1,24 @@
 <?php
 // procesar-webhook.php
 
-// Define una ruta para el archivo de log en tu servidor
-$log_file = __DIR__ . '/webhook_debug.log';
+// Configuración de logging
+$log_dir = __DIR__ . '/logs';
+if (!is_dir($log_dir)) {
+    mkdir($log_dir, 0755, true);
+}
+
+$log_file = $log_dir . '/webhook.log';
 
 // Función para escribir en el log de manera sencilla
 function write_log($message) {
     global $log_file;
-    // Añade la fecha y hora a cada entrada del log
-    error_log(date('[Y-m-d H:i:s] ') . $message . "\n", 3, $log_file);
+    $log_entry = sprintf(
+        "[%s] [WEBHOOK] [%s] %s\n",
+        date('Y-m-d H:i:s'),
+        $_SERVER['REMOTE_ADDR'] ?? 'Unknown IP',
+        $message
+    );
+    error_log($log_entry, 3, $log_file);
 }
 
 write_log("--- INICIO DE NUEVA PETICIÓN WEBHOOK ---");
