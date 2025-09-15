@@ -1,16 +1,28 @@
 <?php
 // generar_token.php
 
+// Define una ruta para el archivo de log en tu servidor
+$log_file = __DIR__ . '/token_debug.log';
+
+// Función para escribir en el log de manera sencilla
+function write_log($message) {
+    global $log_file;
+    // Añade la fecha y hora a cada entrada del log
+    error_log(date('[Y-m-d H:i:s] ') . $message . "\n", 3, $log_file);
+}
+
+write_log("--- INICIO DE NUEVA PETICIÓN DE TOKEN ---");
+
 // Configurar zona horaria
 date_default_timezone_set('America/Bogota');
 
 require_once 'conexion.php'; // Incluye la conexión a la base de datos
 
 header("Content-Type: application/json");
-// Update CORS headers to handle both domains
 header("Access-Control-Allow-Origin: https://sheerit.com.co");
-// Add additional headers needed for CORS
 header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Credentials: true");
 
@@ -26,16 +38,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $inputData = file_get_contents('php://input');
-error_log("Datos en bruto recibidos: " . $inputData);
+write_log("Datos en bruto recibidos: " . $inputData);
 
 $datos = json_decode($inputData, true);
 if (json_last_error() !== JSON_ERROR_NONE) {
-    error_log("Error al decodificar JSON: " . json_last_error_msg());
+    write_log("Error al decodificar JSON: " . json_last_error_msg());
     http_response_code(400);
     echo json_encode(['error' => 'Error al decodificar JSON: ' . json_last_error_msg()]);
     exit;
 }
-error_log("Datos decodificados: " . print_r($datos, true));
+write_log("Datos decodificados: " . print_r($datos, true));
 
 // Extraer datos del cliente desde la clave 'customer'
 $customer = $datos['customer'] ?? null;

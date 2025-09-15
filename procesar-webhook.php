@@ -1,6 +1,18 @@
 <?php
 // procesar-webhook.php
 
+// Define una ruta para el archivo de log en tu servidor
+$log_file = __DIR__ . '/webhook_debug.log';
+
+// Función para escribir en el log de manera sencilla
+function write_log($message) {
+    global $log_file;
+    // Añade la fecha y hora a cada entrada del log
+    error_log(date('[Y-m-d H:i:s] ') . $message . "\n", 3, $log_file);
+}
+
+write_log("--- INICIO DE NUEVA PETICIÓN WEBHOOK ---");
+
 require_once 'conexion.php'; // Conexión a la base de datos
 
 header("Content-Type: application/json");
