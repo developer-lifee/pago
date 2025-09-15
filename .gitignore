@@ -1,6 +1,9 @@
 # Ignorar archivo de configuración con credenciales
 config.php
 
+# NO ignorar el archivo de ambiente
+!environment
+
 # Archivos del sistema
 .DS_Store
 Thumbs.db

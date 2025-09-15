@@ -18,15 +18,27 @@ jobs:
 
     - name: 📝 Create config file from secrets
       run: |
+        # Leer el ambiente del archivo environment
+        CURRENT_ENV=$(cat environment)
+        
+        # Crear el nuevo config.php basado en el ENVIRONMENT actual
         echo "<?php" > config.php
-        echo "define('ENVIRONMENT', 'produccion');" >> config.php
+        echo "define('ENVIRONMENT', '$CURRENT_ENV');" >> config.php
         echo "\$config = [];" >> config.php
         echo "\$config['db_host'] = '${{ secrets.DB_HOST }}';" >> config.php
         echo "\$config['db_name'] = '${{ secrets.DB_NAME }}';" >> config.php
         echo "\$config['db_user'] = '${{ secrets.DB_USER }}';" >> config.php
         echo "\$config['db_pass'] = '${{ secrets.DB_PASS }}';" >> config.php
-        echo "\$config['bold_identity_key'] = '${{ secrets.BOLD_IDENTITY_KEY }}';" >> config.php
-        echo "\$config['bold_secret_key'] = '${{ secrets.BOLD_SECRET_KEY }}';" >> config.php
+        
+        if [[ "$CURRENT_ENV" == "desarrollo" ]]; then
+          # Usar las llaves de desarrollo
+          echo "\$config['bold_identity_key'] = '${{ secrets.DEV_BOLD_IDENTITY_KEY }}';" >> config.php
+          echo "\$config['bold_secret_key'] = '${{ secrets.DEV_BOLD_SECRET_KEY }}';" >> config.php
+        else
+          # Usar las llaves de producción
+          echo "\$config['bold_identity_key'] = '${{ secrets.BOLD_IDENTITY_KEY }}';" >> config.php
+          echo "\$config['bold_secret_key'] = '${{ secrets.BOLD_SECRET_KEY }}';" >> config.php
+        fi
 
     - name: 🚀 FTP Deploy
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
