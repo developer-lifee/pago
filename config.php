@@ -5,7 +5,7 @@
  * Define el entorno actual.
  * Cambia 'desarrollo' por 'produccion' cuando vayas a producción.
  */
-define('ENVIRONMENT', 'desarrollo');
+define('ENVIRONMENT', 'produccion');
 
 // Almacena todas las configuraciones en un array
 $config = [];
