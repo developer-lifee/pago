@@ -26,7 +26,21 @@ write_log("--- INICIO DE NUEVA PETICIÓN DE TOKEN ---");
 // Configurar zona horaria
 date_default_timezone_set('America/Bogota');
 
-require_once 'conexion.php'; // Incluye la conexión a la base de datos
+// Capturar errores fatales
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    write_log("ERROR FATAL: [$errno] $errstr en $errfile:$errline");
+    return false;
+});
+
+try {
+    require_once 'conexion.php'; // Incluye la conexión a la base de datos
+    write_log("Conexión a la base de datos establecida correctamente");
+} catch (Exception $e) {
+    write_log("ERROR: No se pudo conectar a la base de datos - " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['error' => 'Error interno del servidor']);
+    exit;
+}
 
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: https://sheerit.com.co");
@@ -35,6 +49,8 @@ header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Access-Control-Allow-Credentials: true");
+
+write_log("Headers CORS configurados correctamente");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -50,14 +66,22 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $inputData = file_get_contents('php://input');
 write_log("Datos en bruto recibidos: " . $inputData);
 
+if (empty($inputData)) {
+    write_log("ERROR: No se recibieron datos en el cuerpo de la petición");
+    http_response_code(400);
+    echo json_encode(['error' => 'No se recibieron datos']);
+    exit;
+}
+
 $datos = json_decode($inputData, true);
 if (json_last_error() !== JSON_ERROR_NONE) {
     write_log("Error al decodificar JSON: " . json_last_error_msg());
+    write_log("Datos recibidos que causaron el error: " . $inputData);
     http_response_code(400);
     echo json_encode(['error' => 'Error al decodificar JSON: ' . json_last_error_msg()]);
     exit;
 }
-write_log("Datos decodificados: " . print_r($datos, true));
+write_log("Datos decodificados correctamente: " . print_r($datos, true));
 
 // Extraer datos del cliente desde la clave 'customer'
 $customer = $datos['customer'] ?? null;
