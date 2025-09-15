@@ -66,5 +66,5 @@ RewriteRule \.(jpg|jpeg|png|gif)$ - [NC,F,L]
 # Limitar el tamaño máximo de petición para prevenir ataques DDoS
 LimitRequestBody 10485760
 
-# Configurar zona horaria PHP por defecto
-php_value date.timezone "America/Bogota"
+# La zona horaria debe configurarse en php.ini o en el archivo PHP
+# php_value date.timezone "America/Bogota" # Comentado porque causa error 500

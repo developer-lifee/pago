@@ -1,6 +1,9 @@
 <?php
 // generar_token.php
 
+// Configurar zona horaria
+date_default_timezone_set('America/Bogota');
+
 require_once 'conexion.php'; // Incluye la conexión a la base de datos
 
 header("Content-Type: application/json");
