@@ -132,6 +132,16 @@ try {
 
     $apiKey         = $config['bold_identity_key']; // Llave de identidad
     $integrityKey   = $config['bold_secret_key'];   // Llave secreta
+    
+    // Validación de llaves de Bold
+    if (strpos($apiKey, 'test') !== false || strpos($integrityKey, 'test') !== false) {
+        write_log("ADVERTENCIA: Se están usando llaves de prueba de Bold");
+    }
+    
+    // Log de los primeros 8 caracteres de las llaves para debug (no mostrar la llave completa por seguridad)
+    write_log("Validación de llaves Bold - Identity Key (primeros 8 chars): " . substr($apiKey, 0, 8));
+    write_log("Validación de llaves Bold - Secret Key (primeros 8 chars): " . substr($integrityKey, 0, 8));
+    
     $orderId        = 'ORDEN-' . time();
     
     if (!isset($platformData['price'])) {

@@ -18,10 +18,19 @@ function write_log($message) {
 
 try {
     write_log("Intentando conectar a la BD - Host: {$host}, DB: {$db_name}, Usuario: {$username}");
+    write_log("Ambiente actual: " . (defined('ENVIRONMENT') ? ENVIRONMENT : 'no definido'));
+    
+    // Validar que las credenciales no sean de prueba si estamos en producción
+    if (defined('ENVIRONMENT') && ENVIRONMENT === 'production') {
+        if (strpos($host, 'localhost') !== false || $host === '127.0.0.1') {
+            write_log("ADVERTENCIA: Usando host local en ambiente de producción");
+        }
+    }
+    
     $conn = new PDO("mysql:host={$host};dbname={$db_name}", $username, $password);
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $conn->exec("SET NAMES utf8mb4");
-    write_log("Conexión exitosa a la base de datos en modo: " . ENVIRONMENT);
+    write_log("Conexión exitosa a la base de datos en modo: " . (defined('ENVIRONMENT') ? ENVIRONMENT : 'no definido'));
 
 } catch (PDOException $exception) {
     error_log("Error de conexión: " . $exception->getMessage());
