@@ -159,11 +159,10 @@ try {
     write_log("Validación de llaves Bold - Identity Key (primeros 8 chars): " . substr($apiKey, 0, 8));
     write_log("Validación de llaves Bold - Secret Key (primeros 8 chars): " . substr($integrityKey, 0, 8));
     
-    // Generar un ID único que incluya: timestamp con microsegundos + número aleatorio
-    $timestamp = microtime(true);
-    $micro = sprintf("%06d", ($timestamp - floor($timestamp)) * 1000000);
-    $random = sprintf("%04d", mt_rand(0, 9999));
-    $orderId = 'ORDEN-' . date('YmdHis') . $micro . $random;
+    // Generar un ID único en el formato similar al ejemplo de Bold (inv0334)
+    $timestamp = time();
+    $random = mt_rand(1000, 9999);
+    $orderId = sprintf('inv%04d', $random); // Formato exactamente como el ejemplo: inv + 4 dígitos
     write_log("Generando orderId único: " . $orderId);
     
     if (!isset($platformData['price'])) {
@@ -196,14 +195,28 @@ try {
 write_log("=== Inicio de generación de firma de integridad ===");
 write_log("Usando Secret Key de " . ENVIRONMENT);
 
-// La cadena debe ser: {Identificador}{Monto}{Divisa}{LlaveSecreta}
+// Siguiendo EXACTAMENTE el formato del ejemplo de la documentación:
+// inv033439400COPkgfq2nN0o52XqnuXZWIN2F
+
+// Limpiar y formatear valores
+$orderId = trim($orderId);            // Ejemplo: inv0334
+$amount = trim($amount);              // Ejemplo: 39400
+$currency = trim(strtoupper($currency)); // Ejemplo: COP
+$integrityKey = trim($integrityKey);    // La llave secreta
+
+write_log("=== Generación de firma de integridad ===");
+write_log("Siguiendo el formato exacto de la documentación de Bold:");
+write_log("1. OrderId    : '" . $orderId . "'");
+write_log("2. Amount     : '" . $amount . "'");
+write_log("3. Currency   : '" . $currency . "'");
+write_log("4. Secret Key : '..." . substr($integrityKey, -4) . "'");
+
+// Construir la cadena exactamente como en el ejemplo
 $cadena_concatenada = $orderId . $amount . $currency . $integrityKey;
 
-write_log("1. OrderId exacto: '" . $orderId . "'");
-write_log("2. Amount exacto: '" . $amount . "'");
-write_log("3. Currency exacto: '" . $currency . "'");
-write_log("4. Secret Key (últimos 4 chars): ..." . substr($integrityKey, -4));
-write_log("Cadena concatenada (excepto llave): '" . $orderId . $amount . $currency . "'");
+write_log("Cadena ejemplo doc: 'inv033439400COPkgfq2nN0o52XqnuXZWIN2F'");
+write_log("Nuestra cadena   : '" . $orderId . $amount . $currency . "[LLAVE]'");
+write_log("Formato coincide : " . (preg_match('/^inv\d{4}\d+COP.+$/', $cadena_concatenada) ? 'SÍ' : 'NO'));
 
 // Generar y verificar la firma
 $integritySignature = hash("sha256", $cadena_concatenada);
