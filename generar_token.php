@@ -1,15 +1,14 @@
 <?php
 // generar_token.php
 
-// Configuración de logging
+// --- INICIO DE CONFIGURACIÓN DE LOGGING ---
 $log_dir = __DIR__ . '/logs';
 if (!is_dir($log_dir)) {
     mkdir($log_dir, 0755, true);
 }
-
 $log_file = $log_dir . '/token.log';
 
-// Función para escribir en el log de manera sencilla
+// Función para escribir en el log
 function write_log($message) {
     global $log_file;
     $log_entry = sprintf(
@@ -21,73 +20,91 @@ function write_log($message) {
     error_log($log_entry, 3, $log_file);
 }
 
-write_log("--- INICIO DE NUEVA PETICIÓN DE TOKEN ---");
+// --> AÑADIDO: Registrar el inicio absoluto del script
+write_log("--- INICIO DE EJECUCIÓN DE generar_token.php ---");
 
-// Configurar zona horaria
+// Configurar zona horaria y manejo de errores
 date_default_timezone_set('America/Bogota');
-
-// Capturar errores fatales
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     write_log("ERROR FATAL: [$errno] $errstr en $errfile:$errline");
+    // --> AÑADIDO: Asegurarse de que los errores fatales no silencien el script
+    if (error_reporting() !== 0) {
+        // Solo procesa si el error no fue suprimido con @
+        http_response_code(500);
+        echo json_encode(['error' => 'Error interno del servidor. Revise los logs.']);
+        exit;
+    }
     return false;
 });
+// --- FIN DE CONFIGURACIÓN DE LOGGING ---
 
+// --> AÑADIDO: Log antes de incluir archivos
+write_log("Intentando incluir 'conexion.php'...");
 try {
-    require_once 'conexion.php'; // Incluye la conexión a la base de datos
-    write_log("Conexión a la base de datos establecida correctamente");
+    require_once 'conexion.php';
+    write_log("'conexion.php' incluido y conexión a la base de datos establecida.");
 } catch (Exception $e) {
-    write_log("ERROR: No se pudo conectar a la base de datos - " . $e->getMessage());
+    write_log("ERROR CRÍTICO: No se pudo conectar a la base de datos - " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Error interno del servidor']);
+    echo json_encode(['error' => 'Error interno del servidor.']);
     exit;
 }
 
+// Configuración de Headers y CORS
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: https://sheerit.com.co");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Credentials: true");
-
-write_log("Headers CORS configurados correctamente");
+write_log("Headers CORS configurados.");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    write_log("Petición OPTIONS recibida. Respondiendo con 200 OK.");
     http_response_code(200);
     exit;
 }
 
+// --> AÑADIDO: Log para verificar el método de la petición
+write_log("Método de petición recibido: " . $_SERVER['REQUEST_METHOD']);
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    write_log("ERROR: Método no permitido. Se esperaba POST.");
     http_response_code(405);
     echo json_encode(['error' => 'Método no permitido']);
     exit;
 }
 
+// --> AÑADIDO: Log antes de leer el cuerpo de la petición
+write_log("Intentando leer el cuerpo de la petición (php://input)...");
 $inputData = file_get_contents('php://input');
-write_log("Datos en bruto recibidos: " . $inputData);
+write_log("Datos en bruto recibidos: " . ($inputData ?: 'ninguno'));
 
 if (empty($inputData)) {
-    write_log("ERROR: No se recibieron datos en el cuerpo de la petición");
+    write_log("ERROR: No se recibieron datos en el cuerpo de la petición.");
     http_response_code(400);
     echo json_encode(['error' => 'No se recibieron datos']);
     exit;
 }
 
+// --> AÑADIDO: Log antes de decodificar el JSON
+write_log("Intentando decodificar los datos como JSON...");
 $datos = json_decode($inputData, true);
+
 if (json_last_error() !== JSON_ERROR_NONE) {
-    write_log("Error al decodificar JSON: " . json_last_error_msg());
-    write_log("Datos recibidos que causaron el error: " . $inputData);
+    write_log("ERROR al decodificar JSON: " . json_last_error_msg());
+    write_log("Datos que causaron el error: " . $inputData);
     http_response_code(400);
     echo json_encode(['error' => 'Error al decodificar JSON: ' . json_last_error_msg()]);
     exit;
 }
-write_log("Datos decodificados correctamente: " . print_r($datos, true));
+write_log("Datos JSON decodificados correctamente.");
+
+// ... (El resto de tu lógica de validación y procesamiento sigue aquí)
 
 // Extraer datos del cliente desde la clave 'customer'
 $customer = $datos['customer'] ?? null;
 $platformData = $datos['platform'] ?? null;
 
-write_log("Validando campos obligatorios...");
+// ... (resto del código sin cambios)
 $camposFaltantes = [];
 
 if (!$customer) {
@@ -174,10 +191,10 @@ try {
     $stmt = $conn->prepare("INSERT INTO customers_temp (order_id, firstName, lastName, email, whatsapp, numbers) VALUES (?, ?, ?, ?, ?, ?)");
     $stmt->execute([$orderId, $firstName, $lastName, $email, $whatsapp, $numbersStr]);
     $conn->commit();
-    error_log("Datos insertados en customers_temp con order_id: " . $orderId);
+    write_log("Datos insertados en customers_temp con order_id: " . $orderId);
 } catch (PDOException $e) {
     $conn->rollBack();
-    error_log("Error al guardar datos: " . $e->getMessage());
+    write_log("Error al guardar datos en la BD: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['error' => 'Error al guardar los datos: ' . $e->getMessage()]);
     exit;
@@ -194,5 +211,8 @@ $response = [
     'redirectionUrl' => $redirectionUrl,
 ];
 
+// --> AÑADIDO: Log final antes de enviar la respuesta
+write_log("Respuesta generada exitosamente. Enviando al cliente...");
 echo json_encode($response);
+exit; // --> AÑADIDO: Terminar explícitamente el script
 ?>
