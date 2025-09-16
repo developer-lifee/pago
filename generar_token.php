@@ -182,8 +182,12 @@ try {
 }
 
 // Generar la firma de integridad
-$cadena_concatenada = $orderId . $amount . $currency . $integrityKey;
+// La cadena debe ser: monto + moneda + llave secreta (en ese orden exacto)
+$cadena_concatenada = $amount . $currency . $integrityKey;
+write_log("Generando firma de integridad (sin mostrar llave secreta)...");
+write_log("Elementos usados: amount=" . $amount . ", currency=" . $currency);
 $integritySignature = hash("sha256", $cadena_concatenada);
+write_log("Firma de integridad generada exitosamente");
 
 // Insertar en la tabla temporal (por ejemplo, customers_temp)
 try {
