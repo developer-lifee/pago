@@ -1,14 +1,15 @@
 <?php
 // generar_token.php
 
-// --- INICIO DE CONFIGURACIÓN DE LOGGING ---
+// Configuración de logging
 $log_dir = __DIR__ . '/logs';
 if (!is_dir($log_dir)) {
     mkdir($log_dir, 0755, true);
 }
+
 $log_file = $log_dir . '/token.log';
 
-// Función para escribir en el log
+// Función para escribir en el log de manera sencilla
 function write_log($message) {
     global $log_file;
     $log_entry = sprintf(
@@ -20,91 +21,72 @@ function write_log($message) {
     error_log($log_entry, 3, $log_file);
 }
 
-// --> AÑADIDO: Registrar el inicio absoluto del script
-write_log("--- INICIO DE EJECUCIÓN DE generar_token.php ---");
+write_log("--- INICIO DE NUEVA PETICIÓN DE TOKEN ---");
 
-// Configurar zona horaria y manejo de errores
+// Configurar zona horaria
 date_default_timezone_set('America/Bogota');
+
+// Capturar errores fatales
 set_error_handler(function($errno, $errstr, $errfile, $errline) {
     write_log("ERROR FATAL: [$errno] $errstr en $errfile:$errline");
-    // --> AÑADIDO: Asegurarse de que los errores fatales no silencien el script
-    if (error_reporting() !== 0) {
-        // Solo procesa si el error no fue suprimido con @
-        http_response_code(500);
-        echo json_encode(['error' => 'Error interno del servidor. Revise los logs.']);
-        exit;
-    }
     return false;
 });
-// --- FIN DE CONFIGURACIÓN DE LOGGING ---
 
-// --> AÑADIDO: Log antes de incluir archivos
-write_log("Intentando incluir 'conexion.php'...");
 try {
-    require_once 'conexion.php';
-    write_log("'conexion.php' incluido y conexión a la base de datos establecida.");
+    require_once 'conexion.php'; // Incluye la conexión a la base de datos
+    write_log("Conexión a la base de datos establecida correctamente");
 } catch (Exception $e) {
-    write_log("ERROR CRÍTICO: No se pudo conectar a la base de datos - " . $e->getMessage());
+    write_log("ERROR: No se pudo conectar a la base de datos - " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Error interno del servidor.']);
+    echo json_encode(['error' => 'Error interno del servidor']);
     exit;
 }
 
-// Configuración de Headers y CORS
+// Configuración de Headers y CORS (limpia, sin duplicados)
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: https://sheerit.com.co");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-write_log("Headers CORS configurados.");
+
+write_log("Headers CORS configurados correctamente");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    write_log("Petición OPTIONS recibida. Respondiendo con 200 OK.");
     http_response_code(200);
     exit;
 }
 
-// --> AÑADIDO: Log para verificar el método de la petición
-write_log("Método de petición recibido: " . $_SERVER['REQUEST_METHOD']);
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    write_log("ERROR: Método no permitido. Se esperaba POST.");
     http_response_code(405);
     echo json_encode(['error' => 'Método no permitido']);
     exit;
 }
 
-// --> AÑADIDO: Log antes de leer el cuerpo de la petición
-write_log("Intentando leer el cuerpo de la petición (php://input)...");
 $inputData = file_get_contents('php://input');
-write_log("Datos en bruto recibidos: " . ($inputData ?: 'ninguno'));
+write_log("Datos en bruto recibidos: " . $inputData);
 
 if (empty($inputData)) {
-    write_log("ERROR: No se recibieron datos en el cuerpo de la petición.");
+    write_log("ERROR: No se recibieron datos en el cuerpo de la petición");
     http_response_code(400);
     echo json_encode(['error' => 'No se recibieron datos']);
     exit;
 }
 
-// --> AÑADIDO: Log antes de decodificar el JSON
-write_log("Intentando decodificar los datos como JSON...");
 $datos = json_decode($inputData, true);
-
 if (json_last_error() !== JSON_ERROR_NONE) {
-    write_log("ERROR al decodificar JSON: " . json_last_error_msg());
-    write_log("Datos que causaron el error: " . $inputData);
+    write_log("Error al decodificar JSON: " . json_last_error_msg());
+    write_log("Datos recibidos que causaron el error: " . $inputData);
     http_response_code(400);
     echo json_encode(['error' => 'Error al decodificar JSON: ' . json_last_error_msg()]);
     exit;
 }
-write_log("Datos JSON decodificados correctamente.");
-
-// ... (El resto de tu lógica de validación y procesamiento sigue aquí)
+write_log("Datos decodificados correctamente: " . print_r($datos, true));
 
 // Extraer datos del cliente desde la clave 'customer'
 $customer = $datos['customer'] ?? null;
-$platformData = $datos['platform'] ?? null;
+$platformData = $datos['platform'] ?? null; // Puede o no venir
 
-// ... (resto del código sin cambios)
+write_log("Validando campos obligatorios...");
 $camposFaltantes = [];
 
 if (!$customer) {
@@ -117,7 +99,7 @@ if (!$customer) {
 }
 
 if (empty($datos['numbers'])) $camposFaltantes[] = 'numbers';
-if (!$platformData) $camposFaltantes[] = 'platform';
+// 'platform' puede no venir si el frontend ya sabe el precio; no lo marcamos como faltante
 
 if (!empty($camposFaltantes)) {
     write_log("ERROR: Faltan los siguientes campos obligatorios: " . implode(', ', $camposFaltantes));
@@ -138,6 +120,43 @@ $whatsapp = $customer['whatsapp'];
 $numbers = $datos['numbers'];
 $numbersStr = implode(',', $numbers);
 
+// Derivar amount y description de manera robusta
+$description = $datos['description'] ?? null;
+// 1) Preferir platform.price y platform.name si existen
+if (isset($platformData['price'])) {
+    $rawAmount = $platformData['price'];
+    if (!$description && isset($platformData['name'])) {
+        $description = 'Suscripción a ' . $platformData['name'];
+    }
+}
+// 2) Si viene amount como escalar directo
+elseif (isset($datos['amount']) && !is_array($datos['amount'])) {
+    $rawAmount = $datos['amount'];
+}
+// 3) Si se reconoce por el texto de numbers (fallback)
+else {
+    $subText = $numbers[0] ?? '';
+    if (stripos($subText, 'Netflix Extra') !== false) {
+        $rawAmount = 31115; // Precio conocido
+    } else {
+        write_log("ERROR: No se pudo determinar el monto (amount)");
+        http_response_code(400);
+        echo json_encode(['error' => 'Monto no especificado']);
+        exit;
+    }
+    if (!$description) {
+        $description = $subText ?: 'Suscripción';
+    }
+}
+
+// Normalizar amount como string entero sin separadores
+$amount = number_format((float)$rawAmount, 0, '', '');
+$currency = 'COP';
+if (!$description) {
+    $description = 'Suscripción';
+}
+write_log("Valores normalizados -> amount={$amount}, currency={$currency}, description='{$description}'");
+
 // Configuración de integración de Bold usando datos del array de config
 write_log("Configurando datos de integración con Bold...");
 
@@ -147,43 +166,19 @@ try {
         throw new Exception("Configuración de Bold incompleta");
     }
 
-    $apiKey         = $config['bold_identity_key']; // Llave de identidad
-    $integrityKey   = $config['bold_secret_key'];   // Llave secreta
-    
-    // Validación de llaves de Bold
-    if (strpos($apiKey, 'test') !== false || strpos($integrityKey, 'test') !== false) {
-        write_log("ADVERTENCIA: Se están usando llaves de prueba de Bold");
-    }
-    
-    // Log de los primeros 8 caracteres de las llaves para debug (no mostrar la llave completa por seguridad)
-    write_log("Validación de llaves Bold - Identity Key (primeros 8 chars): " . substr($apiKey, 0, 8));
-    write_log("Validación de llaves Bold - Secret Key (primeros 8 chars): " . substr($integrityKey, 0, 8));
-    
-    // Generar un ID único en el formato similar al ejemplo de Bold (inv0334)
-    $timestamp = time();
-    $random = mt_rand(1000, 9999);
-    $orderId = sprintf('inv%04d', $random); // Formato exactamente como el ejemplo: inv + 4 dígitos
-    write_log("Generando orderId único: " . $orderId);
-    
-    if (!isset($platformData['price'])) {
-        write_log("ERROR: Falta el precio en los datos de la plataforma");
-        throw new Exception("Precio no especificado");
-    }
-    
-    // Asegurarse de que el monto está en el formato correcto (string sin decimales)
-    $amount         = number_format($platformData['price'], 0, '', '');  // Convertir a string sin decimales
-    $currency       = 'COP';
-    $description    = 'Suscripción a ' . ($platformData['name'] ?? 'servicio');
+    $apiKey       = $config['bold_identity_key']; // Llave de identidad (publica)
+    $integrityKey = $config['bold_secret_key'];   // Llave secreta (privada)
+
+    // Validación y log mínimo de llaves (sin exponerlas)
+    write_log("Bold Keys -> identity(8): " . substr($apiKey, 0, 8) . ", secret(ult4): ..." . substr($integrityKey, -4));
+
+    // Generar un ID único recomendado por Bold
+    $orderId = 'ORD-' . date('YmdHis') . '-' . mt_rand(1000, 9999);
+    write_log("OrderId generado: " . $orderId);
+
     $tax            = 'vat-19';
     $redirectionUrl = 'https://sheerit.com.co/';
-    
-    write_log("Verificación de valores:");
-    write_log("- Amount (original): " . $platformData['price']);
-    write_log("- Amount (formateado): " . $amount);
-    write_log("- Secret Key (últimos 4 chars): ..." . substr($integrityKey, -4));
-    
-    write_log("Datos de configuración de Bold procesados correctamente");
-    write_log("OrderID generado: " . $orderId);
+    write_log("Datos de integración listos");
 } catch (Exception $e) {
     write_log("ERROR en la configuración de Bold: " . $e->getMessage());
     http_response_code(500);
@@ -191,38 +186,10 @@ try {
     exit;
 }
 
-// Generar la firma de integridad
-write_log("=== Inicio de generación de firma de integridad ===");
-write_log("Usando Secret Key de " . ENVIRONMENT);
-
-// Siguiendo EXACTAMENTE el formato del ejemplo de la documentación:
-// inv033439400COPkgfq2nN0o52XqnuXZWIN2F
-
-// Limpiar y formatear valores
-$orderId = trim($orderId);            // Ejemplo: inv0334
-$amount = trim($amount);              // Ejemplo: 39400
-$currency = trim(strtoupper($currency)); // Ejemplo: COP
-$integrityKey = trim($integrityKey);    // La llave secreta
-
-write_log("=== Generación de firma de integridad ===");
-write_log("Siguiendo el formato exacto de la documentación de Bold:");
-write_log("1. OrderId    : '" . $orderId . "'");
-write_log("2. Amount     : '" . $amount . "'");
-write_log("3. Currency   : '" . $currency . "'");
-write_log("4. Secret Key : '..." . substr($integrityKey, -4) . "'");
-
-// Construir la cadena exactamente como en el ejemplo
-$cadena_concatenada = $orderId . $amount . $currency . $integrityKey;
-
-write_log("Cadena ejemplo doc: 'inv033439400COPkgfq2nN0o52XqnuXZWIN2F'");
-write_log("Nuestra cadena   : '" . $orderId . $amount . $currency . "[LLAVE]'");
-write_log("Formato coincide : " . (preg_match('/^inv\d{4}\d+COP.+$/', $cadena_concatenada) ? 'SÍ' : 'NO'));
-
-// Generar y verificar la firma
-$integritySignature = hash("sha256", $cadena_concatenada);
-write_log("Firma generada: " . $integritySignature);
-$integritySignature = hash("sha256", $cadena_concatenada);
-write_log("Firma de integridad generada exitosamente");
+// Generar la firma de integridad: {Identificador}{Monto}{Divisa}{LlaveSecreta}
+$cadena_concatenada = trim($orderId) . trim($amount) . trim(strtoupper($currency)) . trim($integrityKey);
+$integritySignature = hash('sha256', $cadena_concatenada);
+write_log("Firma generada para orderId {$orderId}");
 
 // Insertar en la tabla temporal (por ejemplo, customers_temp)
 try {
@@ -230,28 +197,26 @@ try {
     $stmt = $conn->prepare("INSERT INTO customers_temp (order_id, firstName, lastName, email, whatsapp, numbers) VALUES (?, ?, ?, ?, ?, ?)");
     $stmt->execute([$orderId, $firstName, $lastName, $email, $whatsapp, $numbersStr]);
     $conn->commit();
-    write_log("Datos insertados en customers_temp con order_id: " . $orderId);
+    error_log("Datos insertados en customers_temp con order_id: " . $orderId);
 } catch (PDOException $e) {
     $conn->rollBack();
-    write_log("Error al guardar datos en la BD: " . $e->getMessage());
+    error_log("Error al guardar datos: " . $e->getMessage());
     http_response_code(500);
     echo json_encode(['error' => 'Error al guardar los datos: ' . $e->getMessage()]);
     exit;
 }
 
+// Respuesta simple para poblar atributos del botón Bold
 $response = [
-    'orderId' => $orderId,
-    'apiKey' => $apiKey,
-    'amount' => $amount,
-    'currency' => $currency,
-    'description' => $description,
-    'tax' => $tax,
-    'integritySignature' => $integritySignature,
-    'redirectionUrl' => $redirectionUrl,
+    'orderId' => $orderId,                    // data-order-id
+    'currency' => $currency,                  // data-currency
+    'amount' => $amount,                      // data-amount
+    'apiKey' => $apiKey,                      // data-api-key
+    'integritySignature' => $integritySignature, // data-integrity-signature
+    'redirectionUrl' => $redirectionUrl,      // data-redirection-url
+    'description' => $description,            // data-description
+    'tax' => $tax                              // data-tax
 ];
 
-// --> AÑADIDO: Log final antes de enviar la respuesta
-write_log("Respuesta generada exitosamente. Enviando al cliente...");
 echo json_encode($response);
-exit; // --> AÑADIDO: Terminar explícitamente el script
 ?>
