@@ -159,7 +159,12 @@ try {
     write_log("Validación de llaves Bold - Identity Key (primeros 8 chars): " . substr($apiKey, 0, 8));
     write_log("Validación de llaves Bold - Secret Key (primeros 8 chars): " . substr($integrityKey, 0, 8));
     
-    $orderId        = 'ORDEN-' . time();
+    // Generar un ID único que incluya: timestamp con microsegundos + número aleatorio
+    $timestamp = microtime(true);
+    $micro = sprintf("%06d", ($timestamp - floor($timestamp)) * 1000000);
+    $random = sprintf("%04d", mt_rand(0, 9999));
+    $orderId = 'ORDEN-' . date('YmdHis') . $micro . $random;
+    write_log("Generando orderId único: " . $orderId);
     
     if (!isset($platformData['price'])) {
         write_log("ERROR: Falta el precio en los datos de la plataforma");
@@ -182,10 +187,13 @@ try {
 }
 
 // Generar la firma de integridad
-// La cadena debe ser: monto + moneda + llave secreta (en ese orden exacto)
-$cadena_concatenada = $amount . $currency . $integrityKey;
-write_log("Generando firma de integridad (sin mostrar llave secreta)...");
-write_log("Elementos usados: amount=" . $amount . ", currency=" . $currency);
+// La cadena debe ser: {Identificador}{Monto}{Divisa}{LlaveSecreta}
+$cadena_concatenada = $orderId . $amount . $currency . $integrityKey;
+write_log("Generando firma de integridad...");
+write_log("Elementos usados en orden: orderId=" . $orderId);
+write_log("                          amount=" . $amount);
+write_log("                          currency=" . $currency);
+write_log("Cadena concatenada (sin llave secreta): " . $orderId . $amount . $currency . "[LLAVE_SECRETA]");
 $integritySignature = hash("sha256", $cadena_concatenada);
 write_log("Firma de integridad generada exitosamente");
 
