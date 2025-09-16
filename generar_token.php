@@ -171,11 +171,17 @@ try {
         throw new Exception("Precio no especificado");
     }
     
-    $amount         = strval($platformData['price']);  // Convertir el precio a string
+    // Asegurarse de que el monto está en el formato correcto (string sin decimales)
+    $amount         = number_format($platformData['price'], 0, '', '');  // Convertir a string sin decimales
     $currency       = 'COP';
     $description    = 'Suscripción a ' . ($platformData['name'] ?? 'servicio');
     $tax            = 'vat-19';
     $redirectionUrl = 'https://sheerit.com.co/';
+    
+    write_log("Verificación de valores:");
+    write_log("- Amount (original): " . $platformData['price']);
+    write_log("- Amount (formateado): " . $amount);
+    write_log("- Secret Key (últimos 4 chars): ..." . substr($integrityKey, -4));
     
     write_log("Datos de configuración de Bold procesados correctamente");
     write_log("OrderID generado: " . $orderId);
@@ -187,13 +193,21 @@ try {
 }
 
 // Generar la firma de integridad
+write_log("=== Inicio de generación de firma de integridad ===");
+write_log("Usando Secret Key de " . ENVIRONMENT);
+
 // La cadena debe ser: {Identificador}{Monto}{Divisa}{LlaveSecreta}
 $cadena_concatenada = $orderId . $amount . $currency . $integrityKey;
-write_log("Generando firma de integridad...");
-write_log("Elementos usados en orden: orderId=" . $orderId);
-write_log("                          amount=" . $amount);
-write_log("                          currency=" . $currency);
-write_log("Cadena concatenada (sin llave secreta): " . $orderId . $amount . $currency . "[LLAVE_SECRETA]");
+
+write_log("1. OrderId exacto: '" . $orderId . "'");
+write_log("2. Amount exacto: '" . $amount . "'");
+write_log("3. Currency exacto: '" . $currency . "'");
+write_log("4. Secret Key (últimos 4 chars): ..." . substr($integrityKey, -4));
+write_log("Cadena concatenada (excepto llave): '" . $orderId . $amount . $currency . "'");
+
+// Generar y verificar la firma
+$integritySignature = hash("sha256", $cadena_concatenada);
+write_log("Firma generada: " . $integritySignature);
 $integritySignature = hash("sha256", $cadena_concatenada);
 write_log("Firma de integridad generada exitosamente");
 
