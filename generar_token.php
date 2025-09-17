@@ -221,8 +221,6 @@ write_log("Formato coincide : " . (preg_match('/^inv\d{4}\d+COP.+$/', $cadena_co
 // Generar y verificar la firma
 $integritySignature = hash("sha256", $cadena_concatenada);
 write_log("Firma generada: " . $integritySignature);
-$integritySignature = hash("sha256", $cadena_concatenada);
-write_log("Firma de integridad generada exitosamente");
 
 // Insertar en la tabla temporal (por ejemplo, customers_temp)
 try {
